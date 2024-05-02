@@ -1,0 +1,65 @@
+openapi: 3.0.0
+info:
+  title: Generic Server
+  version: 1.0.0
+paths:
+  /kek:
+    get:
+      summary: kek
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KekResponse'
+  /entity:
+    post:
+      summary: Create entity
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: '#/components/schemas/CreateEntityRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateEntityResponse'
+components:
+  schemas:
+    CreateEntityRequest:
+      type: object
+      description: Create entity params
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        someValue:
+          type: integer
+      required:
+        - name
+        - description
+        - someValue
+      
+    CreateEntityResponse:
+      type: object
+      description: Create entity response
+      properties:
+        id:
+          type: string
+      required:
+        - id
+      
+    KekResponse:
+      type: object
+      description: Kek
+      properties:
+        id:
+          type: string
+      required:
+        - id
+      

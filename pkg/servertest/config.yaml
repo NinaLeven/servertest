@@ -1,0 +1,8 @@
+package: servertest
+generate:
+  client: true
+  models: true
+  embedded-spec: true
+output: client.gen.go
+output-options:
+  skip-prune: true
