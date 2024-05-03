@@ -1,2 +1,2 @@
-base_path: "/"
+base_path: ""
 http_addr: ":8082"

@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"servertest/internal/api"
@@ -31,7 +30,7 @@ func main() {
 	apiServer := api.NewServer(storage, controller)
 
 	handler := api.HandlerWithOptions(apiServer, api.ChiServerOptions{
-		BaseURL: strings.TrimPrefix(config.BasePath, "/"),
+		BaseURL: config.BasePath,
 	})
 
 	ctx := context.Background()
