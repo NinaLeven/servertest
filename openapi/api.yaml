@@ -3,63 +3,66 @@ info:
   title: Generic Server
   version: 1.0.0
 paths:
-  /kek:
+  /location/{rider_id}:
     get:
-      summary: kek
+      summary: Get rider's location history
+      parameters:
+        - in: path
+          name: rider_id
+          schema:
+            type: string
+        - in: query
+          name: max
+          schema:
+            type: integer
       responses:
+        '404':
+          description: Rider not found
         '200':
           description: Success
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KekResponse'
-  /entity:
+                $ref: '#/components/schemas/GetLocationHistoryResponse'
+
+  /location/{rider_id}/now:
     post:
       summary: Create entity
       parameters:
+        - in: path
+          name: rider_id
+          schema:
+            type: string
         - in: body
           name: body
           schema:
-            $ref: '#/components/schemas/CreateEntityRequest'
+            $ref: '#/components/schemas/LocationEntry'
       responses:
         '200':
           description: Success
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreateEntityResponse'
 components:
   schemas:
-    CreateEntityRequest:
+    LocationEntry:
       type: object
-      description: Create entity params
       properties:
-        name:
-          type: string
-        description:
-          type: string
-        someValue:
-          type: integer
+        lat:
+          type: number
+        long:
+          type: number
       required:
-        - name
-        - description
-        - someValue
-      
-    CreateEntityResponse:
+        - long
+        - lat
+    
+    GetLocationHistoryResponse:
       type: object
-      description: Create entity response
       properties:
-        id:
+        rider_id:
           type: string
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/LocationEntry"
       required:
-        - id
-      
-    KekResponse:
-      type: object
-      description: Kek
-      properties:
-        id:
-          type: string
-      required:
-        - id
+        - rider_id
+        - history
       

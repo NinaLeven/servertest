@@ -17,23 +17,24 @@ import (
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/oapi-codegen/runtime"
 )
 
-// CreateEntityRequest Create entity params
-type CreateEntityRequest struct {
-	Description string `json:"description"`
-	Name        string `json:"name"`
-	SomeValue   int    `json:"someValue"`
+// GetLocationHistoryResponse defines model for GetLocationHistoryResponse.
+type GetLocationHistoryResponse struct {
+	History []LocationEntry `json:"history"`
+	RiderId string          `json:"rider_id"`
 }
 
-// CreateEntityResponse Create entity response
-type CreateEntityResponse struct {
-	Id string `json:"id"`
+// LocationEntry defines model for LocationEntry.
+type LocationEntry struct {
+	Lat  float32 `json:"lat"`
+	Long float32 `json:"long"`
 }
 
-// KekResponse Kek
-type KekResponse struct {
-	Id string `json:"id"`
+// GetLocationRiderIdParams defines parameters for GetLocationRiderId.
+type GetLocationRiderIdParams struct {
+	Max *int `form:"max,omitempty" json:"max,omitempty"`
 }
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
@@ -109,15 +110,15 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
-	// PostEntity request
-	PostEntity(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// GetLocationRiderId request
+	GetLocationRiderId(ctx context.Context, riderId string, params *GetLocationRiderIdParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetKek request
-	GetKek(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// PostLocationRiderIdNow request
+	PostLocationRiderIdNow(ctx context.Context, riderId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
-func (c *Client) PostEntity(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPostEntityRequest(c.Server)
+func (c *Client) GetLocationRiderId(ctx context.Context, riderId string, params *GetLocationRiderIdParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetLocationRiderIdRequest(c.Server, riderId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -128,8 +129,8 @@ func (c *Client) PostEntity(ctx context.Context, reqEditors ...RequestEditorFn) 
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetKek(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetKekRequest(c.Server)
+func (c *Client) PostLocationRiderIdNow(ctx context.Context, riderId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPostLocationRiderIdNowRequest(c.Server, riderId)
 	if err != nil {
 		return nil, err
 	}
@@ -140,16 +141,79 @@ func (c *Client) GetKek(ctx context.Context, reqEditors ...RequestEditorFn) (*ht
 	return c.Client.Do(req)
 }
 
-// NewPostEntityRequest generates requests for PostEntity
-func NewPostEntityRequest(server string) (*http.Request, error) {
+// NewGetLocationRiderIdRequest generates requests for GetLocationRiderId
+func NewGetLocationRiderIdRequest(server string, riderId string, params *GetLocationRiderIdParams) (*http.Request, error) {
 	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "rider_id", runtime.ParamLocationPath, riderId)
+	if err != nil {
+		return nil, err
+	}
 
 	serverURL, err := url.Parse(server)
 	if err != nil {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/entity")
+	operationPath := fmt.Sprintf("/location/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Max != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "max", runtime.ParamLocationQuery, *params.Max); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewPostLocationRiderIdNowRequest generates requests for PostLocationRiderIdNow
+func NewPostLocationRiderIdNowRequest(server string, riderId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "rider_id", runtime.ParamLocationPath, riderId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/location/%s/now", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -160,33 +224,6 @@ func NewPostEntityRequest(server string) (*http.Request, error) {
 	}
 
 	req, err := http.NewRequest("POST", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewGetKekRequest generates requests for GetKek
-func NewGetKekRequest(server string) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/kek")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -237,21 +274,21 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
-	// PostEntityWithResponse request
-	PostEntityWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*PostEntityResponse, error)
+	// GetLocationRiderIdWithResponse request
+	GetLocationRiderIdWithResponse(ctx context.Context, riderId string, params *GetLocationRiderIdParams, reqEditors ...RequestEditorFn) (*GetLocationRiderIdResponse, error)
 
-	// GetKekWithResponse request
-	GetKekWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetKekResponse, error)
+	// PostLocationRiderIdNowWithResponse request
+	PostLocationRiderIdNowWithResponse(ctx context.Context, riderId string, reqEditors ...RequestEditorFn) (*PostLocationRiderIdNowResponse, error)
 }
 
-type PostEntityResponse struct {
+type GetLocationRiderIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *CreateEntityResponse
+	JSON200      *GetLocationHistoryResponse
 }
 
 // Status returns HTTPResponse.Status
-func (r PostEntityResponse) Status() string {
+func (r GetLocationRiderIdResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -259,21 +296,20 @@ func (r PostEntityResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r PostEntityResponse) StatusCode() int {
+func (r GetLocationRiderIdResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type GetKekResponse struct {
+type PostLocationRiderIdNowResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *KekResponse
 }
 
 // Status returns HTTPResponse.Status
-func (r GetKekResponse) Status() string {
+func (r PostLocationRiderIdNowResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -281,47 +317,47 @@ func (r GetKekResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r GetKekResponse) StatusCode() int {
+func (r PostLocationRiderIdNowResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-// PostEntityWithResponse request returning *PostEntityResponse
-func (c *ClientWithResponses) PostEntityWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*PostEntityResponse, error) {
-	rsp, err := c.PostEntity(ctx, reqEditors...)
+// GetLocationRiderIdWithResponse request returning *GetLocationRiderIdResponse
+func (c *ClientWithResponses) GetLocationRiderIdWithResponse(ctx context.Context, riderId string, params *GetLocationRiderIdParams, reqEditors ...RequestEditorFn) (*GetLocationRiderIdResponse, error) {
+	rsp, err := c.GetLocationRiderId(ctx, riderId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParsePostEntityResponse(rsp)
+	return ParseGetLocationRiderIdResponse(rsp)
 }
 
-// GetKekWithResponse request returning *GetKekResponse
-func (c *ClientWithResponses) GetKekWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetKekResponse, error) {
-	rsp, err := c.GetKek(ctx, reqEditors...)
+// PostLocationRiderIdNowWithResponse request returning *PostLocationRiderIdNowResponse
+func (c *ClientWithResponses) PostLocationRiderIdNowWithResponse(ctx context.Context, riderId string, reqEditors ...RequestEditorFn) (*PostLocationRiderIdNowResponse, error) {
+	rsp, err := c.PostLocationRiderIdNow(ctx, riderId, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseGetKekResponse(rsp)
+	return ParsePostLocationRiderIdNowResponse(rsp)
 }
 
-// ParsePostEntityResponse parses an HTTP response from a PostEntityWithResponse call
-func ParsePostEntityResponse(rsp *http.Response) (*PostEntityResponse, error) {
+// ParseGetLocationRiderIdResponse parses an HTTP response from a GetLocationRiderIdWithResponse call
+func ParseGetLocationRiderIdResponse(rsp *http.Response) (*GetLocationRiderIdResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &PostEntityResponse{
+	response := &GetLocationRiderIdResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest CreateEntityResponse
+		var dest GetLocationHistoryResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -332,27 +368,17 @@ func ParsePostEntityResponse(rsp *http.Response) (*PostEntityResponse, error) {
 	return response, nil
 }
 
-// ParseGetKekResponse parses an HTTP response from a GetKekWithResponse call
-func ParseGetKekResponse(rsp *http.Response) (*GetKekResponse, error) {
+// ParsePostLocationRiderIdNowResponse parses an HTTP response from a PostLocationRiderIdNowWithResponse call
+func ParsePostLocationRiderIdNowResponse(rsp *http.Response) (*PostLocationRiderIdNowResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &GetKekResponse{
+	response := &PostLocationRiderIdNowResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest KekResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
 	}
 
 	return response, nil
@@ -361,13 +387,14 @@ func ParseGetKekResponse(rsp *http.Response) (*GetKekResponse, error) {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/7RSTW8TMRD9K9HAcdUNcNsrQhXqBVGJS9WD631N3cQfnZmtFK3835HtRCRhEQjBab2e",
-	"8byPeTPZ6FMMCCo0zCT2Cd7U40eGUXwK6nT/FS8TRMv1CLHskroYaDg0rVC7Vsmw8UIdJY4JrA7y05OZ",
-	"dJ9AA4myCxvKHQXjsViQ6PHN7KbTqguKDZhy7ojxMjnGSMNdG9KdYZ0OuO+OA+LDM6yW8ecKJcUg+J1E",
-	"PvZdinTjgoQLjm5c5HGD7a/hb7D9d1ilyYXHWJ873ZXaNQLY2dUt+BVMHb2CpWG/u1pfrQvDmBBMcjTQ",
-	"h3rVUTL6VLn0zZhyTLFFpFA1hf7nkQb6EkWbx/UZGw8FCw13M7mC8hDHUmopOP61IJZpbxmPNNCb/kdS",
-	"+0NM+6WM5nxfnGh+Vorv1+vysTEoQmVoUto5Wzn2z9Ji+TeIh6VVX8/XdjtZC5G6Fpm8N7y/zFKt9Vts",
-	"C+YGC9ZdQ9v6/5uc0+j9sYpCOeecvwcAAP//vopPwT0EAAA=",
+	"H4sIAAAAAAAC/6xTTWvcQAz9K0Yt9GLibZuTr6WkgVJKcgyhzNra3QlraaKRky7L/vcirfczTughJ8+M",
+	"pCe99+Q1NNwlJiTNUK8hNwvsgh+vUH9yEzQy/YhZWVY3mBNTRosm4YSiET13sU2wY1Ts/O2j4Axq+FAd",
+	"OlQDfLUD/k4qK9iUoKuEUEMQCX6X2KL8ia0BDbGsEmkOG4viYx8FW6jvDpnlfor7PR5PH7BRAzzt+ILA",
+	"MuhRK+q7KYqVLZnmI4GzGTyrdJCXvS050owdJurSYldIKLEpblGeUKCEJ5QcmaCGzxeTi4m15oQUUoQa",
+	"vvpTCSnowqetlgObar2jv7H3OToLI+bh69Z77X28seTr1qEkdKgoGeq7NUTrbPBQAoXORjzSdevaqBVD",
+	"6WOPsjrUduHvWFkkxbnLd2/6bZfJCX2ZTOzTMCmScwgpLeNA8iGbMusjwLd26429dS9azI3EpFu5b/um",
+	"wZxN8MvJpWGfxl2ygliLGffUuvW577pgW2TaFi7Up1zsPCl2a2ipY05VxM++gZxH7PrN+dyvX/z8/pZN",
+	"uT1ybLj9n8Jnf+9rbr4i9ImA3wSDYoGkUQ1qs/kXAAD//4nbH6CSBAAA",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"servertest/internal/servertest"
@@ -25,7 +26,11 @@ func NewServer(
 }
 
 func handleError(w http.ResponseWriter, err error) {
-	w.WriteHeader(http.StatusInternalServerError)
+	if errors.Is(err, &servertest.ErrNotFound{}) {
+		w.WriteHeader(http.StatusNotFound)
+	} else {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 	_, werr := w.Write([]byte(err.Error()))
 	if werr != nil {
 		handleWriteError(werr)
@@ -42,43 +47,58 @@ func (s *Server) repository() servertest.Repository {
 	}
 }
 
-func (s *Server) PostEntity(w http.ResponseWriter, r *http.Request) {
+func (s *Server) GetLocationRiderId(w http.ResponseWriter, r *http.Request, riderId string, params GetLocationRiderIdParams) {
 	ctx := r.Context()
 
-	var req CreateEntityRequest
-	slog.Info("kek")
+	history, err := s.controller.GetRiderLocationHistory(ctx, s.repository(), servertest.GetRiderLocationHistoryOptions{
+		RiderID: riderId,
+		Limit:   params.Max,
+	})
+	if err != nil {
+		handleError(w, err)
+		return
+	}
 
+	res := GetLocationHistoryResponse{
+		RiderId: riderId,
+		History: make([]LocationEntry, 0, len(history)),
+	}
+
+	for _, e := range history {
+		res.History = append(res.History, LocationEntry{
+			Long: e.Long,
+			Lat:  e.Lat,
+		})
+	}
+
+	w.WriteHeader(http.StatusOK)
+
+	err = json.NewEncoder(w).Encode(res)
+	if err != nil {
+		handleWriteError(err)
+	}
+}
+
+func (s *Server) PostLocationRiderIdNow(w http.ResponseWriter, r *http.Request, riderId string) {
+	ctx := r.Context()
+
+	var req LocationEntry
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		handleError(w, err)
 		return
 	}
 
-	id, err := s.controller.CreateEntity(ctx, s.repository(), servertest.CreateEntityOptions{
-		Name:        req.Name,
-		Description: req.Description,
-		SomeValue:   req.SomeValue,
+	err = s.controller.AddRiderLocation(ctx, s.repository(), servertest.LocationEntry{
+		RiderID: riderId,
+		Long:    req.Long,
+		Lat:     req.Lat,
 	})
 	if err != nil {
 		handleError(w, err)
 		return
 	}
 
-	res := CreateEntityResponse{
-		Id: id,
-	}
-
 	w.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(w).Encode(res)
-	if err != nil {
-		handleWriteError(err)
-		return
-	}
-}
-
-func (s *Server) GetKek(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(KekResponse{
-		Id: "aaaa",
-	})
+	return
 }

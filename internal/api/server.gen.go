@@ -8,48 +8,49 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/oapi-codegen/runtime"
 )
 
-// CreateEntityRequest Create entity params
-type CreateEntityRequest struct {
-	Description string `json:"description"`
-	Name        string `json:"name"`
-	SomeValue   int    `json:"someValue"`
+// GetLocationHistoryResponse defines model for GetLocationHistoryResponse.
+type GetLocationHistoryResponse struct {
+	History []LocationEntry `json:"history"`
+	RiderId string          `json:"rider_id"`
 }
 
-// CreateEntityResponse Create entity response
-type CreateEntityResponse struct {
-	Id string `json:"id"`
+// LocationEntry defines model for LocationEntry.
+type LocationEntry struct {
+	Lat  float32 `json:"lat"`
+	Long float32 `json:"long"`
 }
 
-// KekResponse Kek
-type KekResponse struct {
-	Id string `json:"id"`
+// GetLocationRiderIdParams defines parameters for GetLocationRiderId.
+type GetLocationRiderIdParams struct {
+	Max *int `form:"max,omitempty" json:"max,omitempty"`
 }
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Get rider's location history
+	// (GET /location/{rider_id})
+	GetLocationRiderId(w http.ResponseWriter, r *http.Request, riderId string, params GetLocationRiderIdParams)
 	// Create entity
-	// (POST /entity)
-	PostEntity(w http.ResponseWriter, r *http.Request)
-	// kek
-	// (GET /kek)
-	GetKek(w http.ResponseWriter, r *http.Request)
+	// (POST /location/{rider_id}/now)
+	PostLocationRiderIdNow(w http.ResponseWriter, r *http.Request, riderId string)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
 
-// Create entity
-// (POST /entity)
-func (_ Unimplemented) PostEntity(w http.ResponseWriter, r *http.Request) {
+// Get rider's location history
+// (GET /location/{rider_id})
+func (_ Unimplemented) GetLocationRiderId(w http.ResponseWriter, r *http.Request, riderId string, params GetLocationRiderIdParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// kek
-// (GET /kek)
-func (_ Unimplemented) GetKek(w http.ResponseWriter, r *http.Request) {
+// Create entity
+// (POST /location/{rider_id}/now)
+func (_ Unimplemented) PostLocationRiderIdNow(w http.ResponseWriter, r *http.Request, riderId string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -62,12 +63,34 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
-// PostEntity operation middleware
-func (siw *ServerInterfaceWrapper) PostEntity(w http.ResponseWriter, r *http.Request) {
+// GetLocationRiderId operation middleware
+func (siw *ServerInterfaceWrapper) GetLocationRiderId(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
+	var err error
+
+	// ------------- Path parameter "rider_id" -------------
+	var riderId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "rider_id", chi.URLParam(r, "rider_id"), &riderId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: false})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "rider_id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetLocationRiderIdParams
+
+	// ------------- Optional query parameter "max" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "max", r.URL.Query(), &params.Max)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "max", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PostEntity(w, r)
+		siw.Handler.GetLocationRiderId(w, r, riderId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -77,12 +100,23 @@ func (siw *ServerInterfaceWrapper) PostEntity(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// GetKek operation middleware
-func (siw *ServerInterfaceWrapper) GetKek(w http.ResponseWriter, r *http.Request) {
+// PostLocationRiderIdNow operation middleware
+func (siw *ServerInterfaceWrapper) PostLocationRiderIdNow(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
+	var err error
+
+	// ------------- Path parameter "rider_id" -------------
+	var riderId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "rider_id", chi.URLParam(r, "rider_id"), &riderId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: false})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "rider_id", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetKek(w, r)
+		siw.Handler.PostLocationRiderIdNow(w, r, riderId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -206,10 +240,10 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/entity", wrapper.PostEntity)
+		r.Get(options.BaseURL+"/location/{rider_id}", wrapper.GetLocationRiderId)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/kek", wrapper.GetKek)
+		r.Post(options.BaseURL+"/location/{rider_id}/now", wrapper.PostLocationRiderIdNow)
 	})
 
 	return r

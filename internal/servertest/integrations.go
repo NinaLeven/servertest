@@ -7,13 +7,17 @@ type Repository struct {
 }
 
 type StorageEntity struct {
-	ID          string
-	Name        string
-	Description string
-	SomeValue   int
+	RiderID string
+	Lat     float32
+	Long    float32
+}
+
+type StorageListLocationEntitiesOptions struct {
+	RiderID string
+	Limit   *int
 }
 
 type Storage interface {
-	CreateEntity(ctx context.Context, entity StorageEntity) error
-	ListEntities(ctx context.Context) ([]StorageEntity, error)
+	CreateLocationEntity(ctx context.Context, entity StorageEntity) error
+	ListLocationEntities(ctx context.Context, opts StorageListLocationEntitiesOptions) ([]StorageEntity, error)
 }

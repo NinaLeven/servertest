@@ -1,0 +1,30 @@
+version: '3.9'
+services:
+  servertest:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vpbukhti/servertest
+    ports:
+      - "8082:8082"
+    networks:
+      - servertest
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:14-bookworm
+    ports:
+      - 5432:5432
+    volumes:
+      - ~/apps/postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=mypassword
+      - POSTGRES_USER=myuser
+      - POSTGRES_DB=mydb
+
+networks:
+  servertest:
+    name: servertest
+    driver: bridge
+
